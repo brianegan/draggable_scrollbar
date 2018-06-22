@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 typedef Widget DraggableScrollThumbBuilder(
-  Color color,
-  double fadingOpacity,
+  Color backgroundColor,
+  Color labelColor,
+  Animation<double> thumbAnimation,
+  Animation<double> labelAnimation,
   double height, {
   String dynamicLabelText,
 });
@@ -16,58 +18,69 @@ class DraggableScrollbar extends StatefulWidget {
   final BoxScrollView child;
   final DraggableScrollThumbBuilder scrollThumbBuilder;
   final double heightScrollThumb;
-  final Color color;
+  final Color backgroundColor;
+  final Color labelColor;
   final EdgeInsetsGeometry padding;
   final Duration scrollbarFadeDuration;
   final Duration scrollbarTimeToFade;
   final DynamicLabelTextBuilder dynamicLabelTextBuilder;
+  final ScrollController controller;
 
   DraggableScrollbar({
     Key key,
     @required this.heightScrollThumb,
-    @required this.color,
+    @required this.backgroundColor,
     @required this.scrollThumbBuilder,
     @required this.child,
+    @required this.controller,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.dynamicLabelTextBuilder,
-  })  : assert(scrollThumbBuilder != null),
+    this.labelColor,
+  })  : assert(controller != null),
+        assert(scrollThumbBuilder != null),
         super(key: key);
 
   DraggableScrollbar.rrect({
     Key key,
     @required this.heightScrollThumb,
-    @required this.color,
+    @required this.backgroundColor,
     @required this.child,
+    @required this.controller,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.dynamicLabelTextBuilder,
+    this.labelColor,
   })  : scrollThumbBuilder = _scrollThumbBuilderRRect,
         super(key: key);
 
   DraggableScrollbar.withArrows({
     Key key,
     @required this.heightScrollThumb,
-    @required this.color,
+    @required this.backgroundColor,
     @required this.child,
+    @required this.controller,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.dynamicLabelTextBuilder,
+    this.labelColor,
   })  : scrollThumbBuilder = _scrollThumbArrow,
         super(key: key);
 
   DraggableScrollbar.asGooglePhotos({
     Key key,
     this.heightScrollThumb = 50.0,
-    this.color = Colors.white,
+    this.backgroundColor = Colors.white,
     @required this.child,
+    @required this.controller,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.dynamicLabelTextBuilder,
+    this.labelColor,
   })  : scrollThumbBuilder = _scrollThumbGooglePhotos(heightScrollThumb * 0.6),
         super(key: key);
 
@@ -76,17 +89,15 @@ class DraggableScrollbar extends StatefulWidget {
 
   static DraggableScrollThumbBuilder _scrollThumbGooglePhotos(double width) {
     return (
-      Color color,
-      double fadingOpacity,
+      Color backgroundColor,
+      Color labelColor,
+      Animation<double> thumbAnimation,
+      Animation<double> labelAnimation,
       double height, {
       String dynamicLabelText,
     }) {
-      final backgroundColor = calculateOpacity(color, fadingOpacity);
-
       final scrollThumb = CustomPaint(
-        foregroundPainter: ArrowCustomPainter(
-          calculateOpacity(Colors.grey, fadingOpacity),
-        ),
+        foregroundPainter: ArrowCustomPainter(Colors.grey),
         child: Material(
           elevation: 4.0,
           child: Container(
@@ -102,35 +113,32 @@ class DraggableScrollbar extends StatefulWidget {
         ),
       );
 
-      if (dynamicLabelText == null) {
-        return scrollThumb;
-      }
-
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Container(
-            margin: EdgeInsets.only(right: 10.0),
-            child: Material(
-              color: backgroundColor,
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-              child: Container(
-                constraints: BoxConstraints.tight(Size(50.0, 20.0)),
-                alignment: Alignment.center,
-                child: Text(dynamicLabelText),
+      return SlideFadeTransition(
+        animation: thumbAnimation,
+        child: dynamicLabelText == null
+            ? scrollThumb
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ScrollLabel(
+                    text: dynamicLabelText,
+                    animation: labelAnimation,
+                    labelColor: labelColor,
+                    backgroundColor: backgroundColor,
+                  ),
+                  scrollThumb,
+                ],
               ),
-            ),
-          ),
-          scrollThumb,
-        ],
       );
     };
   }
 
   static Widget _scrollThumbArrow(
-    Color color,
-    double fadingOpacity,
+    Color backgroundColor,
+    Color labelColor,
+    Animation<double> thumbAnimation,
+    Animation<double> labelAnimation,
     double height, {
     String dynamicLabelText,
   }) {
@@ -139,7 +147,7 @@ class DraggableScrollbar extends StatefulWidget {
         height: height,
         width: 20.0,
         decoration: BoxDecoration(
-          color: calculateOpacity(color, fadingOpacity),
+          color: backgroundColor,
           borderRadius: BorderRadius.all(
             Radius.circular(10.0),
           ),
@@ -148,103 +156,128 @@ class DraggableScrollbar extends StatefulWidget {
       clipper: ArrowClipper(),
     );
 
-    if (dynamicLabelText == null) {
-      return scrollThumb;
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Container(
-          margin: EdgeInsets.only(right: 30.0),
-          child: Material(
-            elevation: 8.0,
-            color: calculateOpacity(color, fadingOpacity),
-            borderRadius: BorderRadius.all(Radius.circular(15.0)),
-            child: Container(
-              constraints: BoxConstraints.tight(Size(70.0, 30.0)),
-              alignment: Alignment.center,
-              child: Text(
-                dynamicLabelText,
-                style: TextStyle(color: Colors.white),
-              ),
+    return SlideFadeTransition(
+      animation: thumbAnimation,
+      child: dynamicLabelText == null
+          ? scrollThumb
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ScrollLabel(
+                  text: dynamicLabelText,
+                  animation: labelAnimation,
+                  labelColor: labelColor,
+                  backgroundColor: backgroundColor,
+                ),
+                scrollThumb
+              ],
             ),
-          ),
-        ),
-        scrollThumb
-      ],
     );
   }
 
   //height is better 36.0
   static Widget _scrollThumbBuilderRRect(
-    Color color,
-    double fadingOpacity,
+    Color backgroundColor,
+    Color labelColor,
+    Animation<double> thumbAnimation,
+    Animation<double> labelAnimation,
     double height, {
     String dynamicLabelText,
   }) {
-    return Material(
-      elevation: 8.0,
-      child: Container(
-        constraints: BoxConstraints.tight(
-          Size(15.0, height),
+    return SlideFadeTransition(
+      animation: thumbAnimation,
+      child: Material(
+        elevation: 4.0,
+        child: Container(
+          constraints: BoxConstraints.tight(
+            Size(15.0, height),
+          ),
         ),
+        color: backgroundColor,
+        borderRadius: BorderRadius.all(Radius.circular(7.0)),
       ),
-      color: calculateOpacity(color, fadingOpacity),
-      borderRadius: BorderRadius.all(Radius.circular(7.0)),
     );
   }
+}
 
-  static Color calculateOpacity(Color color, double fadingOpacity) {
-    return color.withOpacity(color.opacity * fadingOpacity);
+class ScrollLabel extends StatelessWidget {
+  final Animation<double> animation;
+  final Color backgroundColor;
+  final Color labelColor;
+  final String text;
+
+  const ScrollLabel({
+    Key key,
+    @required this.text,
+    @required this.animation,
+    @required this.backgroundColor,
+    @required this.labelColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: Container(
+        margin: EdgeInsets.only(right: 10.0),
+        child: Material(
+          elevation: 4.0,
+          color: backgroundColor,
+          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+          child: Container(
+            constraints: BoxConstraints.tight(Size(70.0, 30.0)),
+            alignment: Alignment.center,
+            child: Text(text, style: TextStyle(color: labelColor)),
+          ),
+        ),
+      ),
+    );
   }
 }
 
 class _DraggableScrollbarState extends State<DraggableScrollbar>
     with TickerProviderStateMixin {
-  ScrollController _controller;
   double _barOffset;
   double _viewOffset;
   bool _isDragInProcess;
-  DraggableScrollThumb _draggableScrollThumb;
-  Color _color;
 
-  AnimationController _fadeoutAnimationController;
-  Animation<double> _fadeoutOpacityAnimation;
+  AnimationController _thumbAnimationController;
+  Animation<double> _thumbAnimation;
+  AnimationController _labelAnimationController;
+  Animation<double> _labelAnimation;
   Timer _fadeoutTimer;
 
   @override
   void initState() {
     super.initState();
-    _controller = widget.child.controller;
     _barOffset = 0.0;
     _viewOffset = 0.0;
     _isDragInProcess = false;
-    _color = widget.color;
 
-    _fadeoutAnimationController = AnimationController(
+    _thumbAnimationController = AnimationController(
       vsync: this,
       duration: widget.scrollbarFadeDuration,
     );
-    _fadeoutOpacityAnimation = CurvedAnimation(
-      parent: _fadeoutAnimationController,
+
+    _thumbAnimation = CurvedAnimation(
+      parent: _thumbAnimationController,
       curve: Curves.fastOutSlowIn,
     );
 
-    _draggableScrollThumb = DraggableScrollThumb(
-      color: _color,
-      fadeoutOpacityAnimation: _fadeoutOpacityAnimation,
-      builder: widget.scrollThumbBuilder,
-      height: widget.heightScrollThumb,
-      withDynamicLabel: widget.dynamicLabelTextBuilder != null,
+    _labelAnimationController = AnimationController(
+      vsync: this,
+      duration: widget.scrollbarFadeDuration,
     );
 
-    _fadeoutAnimationController.addListener(() => setState(() {}));
+    _labelAnimation = CurvedAnimation(
+      parent: _labelAnimationController,
+      curve: Curves.fastOutSlowIn,
+    );
   }
 
   @override
   void dispose() {
-    _fadeoutAnimationController.dispose();
+    _thumbAnimationController.dispose();
     _fadeoutTimer?.cancel();
     super.dispose();
   }
@@ -254,14 +287,14 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   double get barMinScrollExtent => 0.0;
 
-  double get viewMaxScrollExtent => _controller.position.maxScrollExtent;
+  double get viewMaxScrollExtent => widget.controller.position.maxScrollExtent;
 
-  double get viewMinScrollExtent => _controller.position.minScrollExtent;
+  double get viewMinScrollExtent => widget.controller.position.minScrollExtent;
 
   @override
   Widget build(BuildContext context) {
     String label;
-    if (widget.dynamicLabelTextBuilder != null && _isDragInProcess) {
+    if (widget.dynamicLabelTextBuilder != null) {
       label = widget.dynamicLabelTextBuilder(
         _viewOffset + _barOffset + widget.heightScrollThumb / 2,
       );
@@ -282,7 +315,14 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
               alignment: Alignment.topRight,
               margin: EdgeInsets.only(top: _barOffset),
               padding: widget.padding,
-              child: _draggableScrollThumb.build(dynamicLabelText: label),
+              child: widget.scrollThumbBuilder(
+                widget.backgroundColor,
+                widget.labelColor,
+                _thumbAnimation,
+                _labelAnimation,
+                widget.heightScrollThumb,
+                dynamicLabelText: label,
+              ),
             ),
           )
         ],
@@ -314,8 +354,8 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
         }
 
         _viewOffset += notification.scrollDelta;
-        if (_viewOffset < _controller.position.minScrollExtent) {
-          _viewOffset = _controller.position.minScrollExtent;
+        if (_viewOffset < widget.controller.position.minScrollExtent) {
+          _viewOffset = widget.controller.position.minScrollExtent;
         }
         if (_viewOffset > viewMaxScrollExtent) {
           _viewOffset = viewMaxScrollExtent;
@@ -324,13 +364,14 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
       if (notification is ScrollUpdateNotification ||
           notification is OverscrollNotification) {
-        if (_fadeoutAnimationController.status != AnimationStatus.forward) {
-          _fadeoutAnimationController.forward();
+        if (_thumbAnimationController.status != AnimationStatus.forward) {
+          _thumbAnimationController.forward();
         }
 
         _fadeoutTimer?.cancel();
         _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
-          _fadeoutAnimationController.reverse();
+          _thumbAnimationController.reverse();
+          _labelAnimationController.reverse();
           _fadeoutTimer = null;
         });
       }
@@ -356,12 +397,14 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
   void _onVerticalDragStart(DragStartDetails details) {
     setState(() {
       _isDragInProcess = true;
+      _labelAnimationController.forward();
+      _fadeoutTimer?.cancel();
     });
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
-    if (_fadeoutAnimationController.status != AnimationStatus.forward) {
-      _fadeoutAnimationController.forward();
+    if (_thumbAnimationController.status != AnimationStatus.forward) {
+      _thumbAnimationController.forward();
     }
     setState(() {
       if (_isDragInProcess) {
@@ -377,21 +420,22 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
         double viewDelta = getScrollViewDelta(
             details.delta.dy, barMaxScrollExtent, viewMaxScrollExtent);
 
-        _viewOffset = _controller.position.pixels + viewDelta;
-        if (_viewOffset < _controller.position.minScrollExtent) {
-          _viewOffset = _controller.position.minScrollExtent;
+        _viewOffset = widget.controller.position.pixels + viewDelta;
+        if (_viewOffset < widget.controller.position.minScrollExtent) {
+          _viewOffset = widget.controller.position.minScrollExtent;
         }
         if (_viewOffset > viewMaxScrollExtent) {
           _viewOffset = viewMaxScrollExtent;
         }
-        _controller.jumpTo(_viewOffset);
+        widget.controller.jumpTo(_viewOffset);
       }
     });
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
     _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
-      _fadeoutAnimationController.reverse();
+      _thumbAnimationController.reverse();
+      _labelAnimationController.reverse();
       _fadeoutTimer = null;
     });
     setState(() {
@@ -435,52 +479,6 @@ class ArrowCustomPainter extends CustomPainter {
   }
 }
 
-class DraggableScrollThumb extends ChangeNotifier {
-  DraggableScrollThumb({
-    @required this.color,
-    @required this.fadeoutOpacityAnimation,
-    @required this.builder,
-    @required this.height,
-    this.withDynamicLabel = false,
-  })  : assert(color != null),
-        assert(fadeoutOpacityAnimation != null),
-        assert(builder != null),
-        assert(height != null);
-
-  ///height of the thumb
-  final double height;
-
-  /// [Color] of the thumb. Mustn't be null.
-  final Color color;
-
-  /// An opacity [Animation] that dictates the opacity of the thumb.
-  /// Changes in value of this [Listenable] will automatically trigger repaints.
-  /// Mustn't be null.
-  final Animation<double> fadeoutOpacityAnimation;
-
-  final bool withDynamicLabel;
-
-  final DraggableScrollThumbBuilder builder;
-
-  Widget build({String dynamicLabelText}) {
-    if (fadeoutOpacityAnimation.value == 0.0) {
-      return Container();
-    }
-
-    return builder(
-      color,
-      fadeoutOpacityAnimation.value,
-      height,
-      dynamicLabelText: dynamicLabelText,
-    );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-}
-
 class ArrowClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -518,4 +516,33 @@ class ArrowClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class SlideFadeTransition extends StatelessWidget {
+  final Animation<double> animation;
+  final Widget child;
+
+  const SlideFadeTransition({
+    Key key,
+    @required this.animation,
+    @required this.child,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) => animation.value == 0.0 ? Container() : child,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0.3, 0.0),
+          end: const Offset(0.0, 0.0),
+        ).animate(animation),
+        child: FadeTransition(
+          opacity: animation,
+          child: child,
+        ),
+      ),
+    );
+  }
 }

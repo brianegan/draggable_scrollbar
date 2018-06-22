@@ -24,7 +24,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  ScrollController _controller2 = ScrollController();
+  ScrollController _controller = ScrollController();
 
   @override
   Widget build(BuildContext context) {
@@ -36,36 +36,30 @@ class _MyHomePageState extends State<MyHomePage> {
         children: <Widget>[
           Expanded(
             child: DraggableScrollbar.asGooglePhotos(
-              child: _buildScrollViewAsList(_controller2),
               dynamicLabelTextBuilder: (double offset) => "${offset ~/ 100}",
-              heightScrollThumb: 50.0,
-              color: Colors.white,
-              scrollbarTimeToFade: Duration(seconds: 3),
+              controller: _controller,
+              child: ListView.builder(
+                controller: _controller,
+                itemCount: 1000,
+                itemExtent: 100.0,
+                itemBuilder: (context, index) {
+                  return Container(
+                    padding: EdgeInsets.all(10.0),
+                    child: Material(
+                      elevation: 4.0,
+                      borderRadius: BorderRadius.circular(5.0),
+                      color: Colors.purple[index % 9 * 100],
+                      child: Center(
+                        child: Text(index.toString()),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildScrollViewAsList(ScrollController controller) {
-    return ListView.builder(
-      controller: controller,
-      itemCount: 1000,
-      itemExtent: 100.0,
-      itemBuilder: (context, index) {
-        return Container(
-          padding: EdgeInsets.all(10.0),
-          child: Material(
-            elevation: 4.0,
-            borderRadius: BorderRadius.circular(5.0),
-            color: Colors.purple[index % 9 * 100],
-            child: Center(
-              child: Text(index.toString()),
-            ),
-          ),
-        );
-      },
     );
   }
 }
