@@ -3,25 +3,46 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+/// Build the Drag Handle and label using the current configuration
 typedef Widget HandleBuilder(
   Color backgroundColor,
-  Animation<double> thumbAnimation,
+  Animation<double> handleAnimation,
   Animation<double> labelAnimation,
   double height, {
-  Widget label,
+  Text labelText,
 });
 
+/// Build a Text widget given the current scroll offset
 typedef Text LabelTextBuilder(double offsetY);
 
+/// A widget that will display a BoxScrollView with a Handle that can be used
+/// to quickly navigate the BoxScrollView.
 class DraggableScrollbar extends StatefulWidget {
+  /// The view that will be scrolled with the handle
   final BoxScrollView child;
+
+  /// A function that builds a handle using the current configuration
   final HandleBuilder scrollHandleBuilder;
+
+  /// The height of the scroll handle
   final double heightScrollHandle;
+
+  /// The background color of the label and handle
   final Color backgroundColor;
+
+  /// The amount of padding that should surround the handle
   final EdgeInsetsGeometry padding;
-  final Duration scrollbarFadeDuration;
+
+  /// Determines how quickly the scrollbar will animate in and out
+  final Duration scrollbarAnimationDuration;
+
+  /// How long should the handle be visible before fading out
   final Duration scrollbarTimeToFade;
+
+  /// Build a Text widget from the current offset in the BoxScrollView
   final LabelTextBuilder labelTextBuilder;
+
+  /// The ScrollController for the BoxScrollView
   final ScrollController controller;
 
   DraggableScrollbar({
@@ -32,7 +53,7 @@ class DraggableScrollbar extends StatefulWidget {
     @required this.child,
     @required this.controller,
     this.padding,
-    this.scrollbarFadeDuration = const Duration(milliseconds: 300),
+    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
   })  : assert(controller != null),
@@ -46,33 +67,33 @@ class DraggableScrollbar extends StatefulWidget {
     this.heightScrollHandle = 48.0,
     this.backgroundColor = Colors.white,
     this.padding,
-    this.scrollbarFadeDuration = const Duration(milliseconds: 300),
+    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
   })  : scrollHandleBuilder = _handleBuilderRRect,
         super(key: key);
 
-  DraggableScrollbar.withArrows({
+  DraggableScrollbar.arrows({
     Key key,
     @required this.child,
     @required this.controller,
     this.heightScrollHandle = 48.0,
     this.backgroundColor = Colors.white,
     this.padding,
-    this.scrollbarFadeDuration = const Duration(milliseconds: 300),
+    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
   })  : scrollHandleBuilder = _handleBuilderArrow,
         super(key: key);
 
-  DraggableScrollbar.asGooglePhotos({
+  DraggableScrollbar.googlePhotos({
     Key key,
     @required this.child,
     @required this.controller,
     this.heightScrollHandle = 48.0,
     this.backgroundColor = Colors.white,
     this.padding,
-    this.scrollbarFadeDuration = const Duration(milliseconds: 300),
+    this.scrollbarAnimationDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
     this.labelTextBuilder,
   })  : scrollHandleBuilder =
@@ -85,10 +106,10 @@ class DraggableScrollbar extends StatefulWidget {
   static HandleBuilder _handleBuilderGooglePhotos(double width) {
     return (
       Color backgroundColor,
-      Animation<double> thumbAnimation,
+      Animation<double> handleAnimation,
       Animation<double> labelAnimation,
       double height, {
-      Widget label,
+      Text labelText,
     }) {
       final scrollThumb = CustomPaint(
         foregroundPainter: ArrowCustomPainter(Colors.grey),
@@ -108,8 +129,8 @@ class DraggableScrollbar extends StatefulWidget {
       );
 
       return SlideFadeTransition(
-        animation: thumbAnimation,
-        child: label == null
+        animation: handleAnimation,
+        child: labelText == null
             ? scrollThumb
             : Row(
                 mainAxisSize: MainAxisSize.min,
@@ -117,7 +138,7 @@ class DraggableScrollbar extends StatefulWidget {
                 children: [
                   ScrollLabel(
                     animation: labelAnimation,
-                    child: label,
+                    child: labelText,
                     backgroundColor: backgroundColor,
                   ),
                   scrollThumb,
@@ -129,34 +150,34 @@ class DraggableScrollbar extends StatefulWidget {
 
   static Widget _handleBuilderArrow(
     Color backgroundColor,
-    Animation<double> thumbAnimation,
+    Animation<double> handleAnimation,
     Animation<double> labelAnimation,
     double height, {
-    Widget label,
+    Text labelText,
   }) {
     final scrollThumb = ClipPath(
-      child: Material(
-        elevation: 4.0,
-        child: Container(
-          height: height,
-          width: 20.0,
-        ),
-        borderRadius: BorderRadius.all(
-          Radius.circular(12.0),
+      child: Container(
+        height: height,
+        width: 20.0,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.all(
+            Radius.circular(12.0),
+          ),
         ),
       ),
       clipper: ArrowClipper(),
     );
 
     return SlideFadeTransition(
-      animation: thumbAnimation,
-      child: label == null
+      animation: handleAnimation,
+      child: labelText == null
           ? scrollThumb
           : Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ScrollLabel(
-                  child: label,
+                  child: labelText,
                   animation: labelAnimation,
                   backgroundColor: backgroundColor,
                 ),
@@ -169,13 +190,13 @@ class DraggableScrollbar extends StatefulWidget {
   //height is better 36.0
   static Widget _handleBuilderRRect(
     Color backgroundColor,
-    Animation<double> thumbAnimation,
+    Animation<double> handleAnimation,
     Animation<double> labelAnimation,
     double height, {
-    Widget label,
+    Text labelText,
   }) {
     return SlideFadeTransition(
-      animation: thumbAnimation,
+      animation: handleAnimation,
       child: Material(
         elevation: 4.0,
         child: Container(
@@ -229,8 +250,8 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
   double _viewOffset;
   bool _isDragInProcess;
 
-  AnimationController _thumbAnimationController;
-  Animation<double> _thumbAnimation;
+  AnimationController _handleAnimationController;
+  Animation<double> _handleAnimation;
   AnimationController _labelAnimationController;
   Animation<double> _labelAnimation;
   Timer _fadeoutTimer;
@@ -242,19 +263,19 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
     _viewOffset = 0.0;
     _isDragInProcess = false;
 
-    _thumbAnimationController = AnimationController(
+    _handleAnimationController = AnimationController(
       vsync: this,
-      duration: widget.scrollbarFadeDuration,
+      duration: widget.scrollbarAnimationDuration,
     );
 
-    _thumbAnimation = CurvedAnimation(
-      parent: _thumbAnimationController,
+    _handleAnimation = CurvedAnimation(
+      parent: _handleAnimationController,
       curve: Curves.fastOutSlowIn,
     );
 
     _labelAnimationController = AnimationController(
       vsync: this,
-      duration: widget.scrollbarFadeDuration,
+      duration: widget.scrollbarAnimationDuration,
     );
 
     _labelAnimation = CurvedAnimation(
@@ -265,7 +286,7 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   @override
   void dispose() {
-    _thumbAnimationController.dispose();
+    _handleAnimationController.dispose();
     _fadeoutTimer?.cancel();
     super.dispose();
   }
@@ -281,9 +302,10 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   @override
   Widget build(BuildContext context) {
-    Widget label;
+    Widget labelText;
+
     if (widget.labelTextBuilder != null) {
-      label = widget.labelTextBuilder(
+      labelText = widget.labelTextBuilder(
         _viewOffset + _barOffset + widget.heightScrollHandle / 2,
       );
     }
@@ -305,10 +327,10 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
               padding: widget.padding,
               child: widget.scrollHandleBuilder(
                 widget.backgroundColor,
-                _thumbAnimation,
+                _handleAnimation,
                 _labelAnimation,
                 widget.heightScrollHandle,
-                label: label,
+                labelText: labelText,
               ),
             ),
           )
@@ -351,13 +373,13 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
       if (notification is ScrollUpdateNotification ||
           notification is OverscrollNotification) {
-        if (_thumbAnimationController.status != AnimationStatus.forward) {
-          _thumbAnimationController.forward();
+        if (_handleAnimationController.status != AnimationStatus.forward) {
+          _handleAnimationController.forward();
         }
 
         _fadeoutTimer?.cancel();
         _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
-          _thumbAnimationController.reverse();
+          _handleAnimationController.reverse();
           _labelAnimationController.reverse();
           _fadeoutTimer = null;
         });
@@ -391,8 +413,8 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
     setState(() {
-      if (_thumbAnimationController.status != AnimationStatus.forward) {
-        _thumbAnimationController.forward();
+      if (_handleAnimationController.status != AnimationStatus.forward) {
+        _handleAnimationController.forward();
       }
       if (_isDragInProcess) {
         _barOffset += details.delta.dy;
@@ -421,7 +443,7 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   void _onVerticalDragEnd(DragEndDetails details) {
     _fadeoutTimer = Timer(widget.scrollbarTimeToFade, () {
-      _thumbAnimationController.reverse();
+      _handleAnimationController.reverse();
       _labelAnimationController.reverse();
       _fadeoutTimer = null;
     });
