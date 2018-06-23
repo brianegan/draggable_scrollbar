@@ -3,98 +3,92 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-typedef Widget DraggableScrollThumbBuilder(
+typedef Widget HandleBuilder(
   Color backgroundColor,
-  Color labelColor,
   Animation<double> thumbAnimation,
   Animation<double> labelAnimation,
   double height, {
-  String dynamicLabelText,
+  Widget label,
 });
 
-typedef String DynamicLabelTextBuilder(double offsetY);
+typedef Text LabelTextBuilder(double offsetY);
 
 class DraggableScrollbar extends StatefulWidget {
   final BoxScrollView child;
-  final DraggableScrollThumbBuilder scrollThumbBuilder;
-  final double heightScrollThumb;
+  final HandleBuilder scrollHandleBuilder;
+  final double heightScrollHandle;
   final Color backgroundColor;
-  final Color labelColor;
   final EdgeInsetsGeometry padding;
   final Duration scrollbarFadeDuration;
   final Duration scrollbarTimeToFade;
-  final DynamicLabelTextBuilder dynamicLabelTextBuilder;
+  final LabelTextBuilder labelTextBuilder;
   final ScrollController controller;
 
   DraggableScrollbar({
     Key key,
-    @required this.heightScrollThumb,
+    @required this.heightScrollHandle,
     @required this.backgroundColor,
-    @required this.scrollThumbBuilder,
+    @required this.scrollHandleBuilder,
     @required this.child,
     @required this.controller,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.dynamicLabelTextBuilder,
-    this.labelColor,
+    this.labelTextBuilder,
   })  : assert(controller != null),
-        assert(scrollThumbBuilder != null),
+        assert(scrollHandleBuilder != null),
         super(key: key);
 
   DraggableScrollbar.rrect({
     Key key,
-    @required this.heightScrollThumb,
-    @required this.backgroundColor,
     @required this.child,
     @required this.controller,
+    this.heightScrollHandle = 48.0,
+    this.backgroundColor = Colors.white,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.dynamicLabelTextBuilder,
-    this.labelColor,
-  })  : scrollThumbBuilder = _scrollThumbBuilderRRect,
+    this.labelTextBuilder,
+  })  : scrollHandleBuilder = _handleBuilderRRect,
         super(key: key);
 
   DraggableScrollbar.withArrows({
     Key key,
-    @required this.heightScrollThumb,
-    @required this.backgroundColor,
     @required this.child,
     @required this.controller,
+    this.heightScrollHandle = 48.0,
+    this.backgroundColor = Colors.white,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.dynamicLabelTextBuilder,
-    this.labelColor,
-  })  : scrollThumbBuilder = _scrollThumbArrow,
+    this.labelTextBuilder,
+  })  : scrollHandleBuilder = _handleBuilderArrow,
         super(key: key);
 
   DraggableScrollbar.asGooglePhotos({
     Key key,
-    this.heightScrollThumb = 50.0,
-    this.backgroundColor = Colors.white,
     @required this.child,
     @required this.controller,
+    this.heightScrollHandle = 48.0,
+    this.backgroundColor = Colors.white,
     this.padding,
     this.scrollbarFadeDuration = const Duration(milliseconds: 300),
     this.scrollbarTimeToFade = const Duration(milliseconds: 600),
-    this.dynamicLabelTextBuilder,
-    this.labelColor,
-  })  : scrollThumbBuilder = _scrollThumbGooglePhotos(heightScrollThumb * 0.6),
+    this.labelTextBuilder,
+  })  : scrollHandleBuilder =
+            _handleBuilderGooglePhotos(heightScrollHandle * 0.6),
         super(key: key);
 
   @override
   _DraggableScrollbarState createState() => _DraggableScrollbarState();
 
-  static DraggableScrollThumbBuilder _scrollThumbGooglePhotos(double width) {
+  static HandleBuilder _handleBuilderGooglePhotos(double width) {
     return (
       Color backgroundColor,
-      Color labelColor,
       Animation<double> thumbAnimation,
       Animation<double> labelAnimation,
       double height, {
-      String dynamicLabelText,
+      Widget label,
     }) {
       final scrollThumb = CustomPaint(
         foregroundPainter: ArrowCustomPainter(Colors.grey),
@@ -107,24 +101,23 @@ class DraggableScrollbar extends StatefulWidget {
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(height),
             bottomLeft: Radius.circular(height),
-            topRight: Radius.circular(5.0),
-            bottomRight: Radius.circular(5.0),
+            topRight: Radius.circular(4.0),
+            bottomRight: Radius.circular(4.0),
           ),
         ),
       );
 
       return SlideFadeTransition(
         animation: thumbAnimation,
-        child: dynamicLabelText == null
+        child: label == null
             ? scrollThumb
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   ScrollLabel(
-                    text: dynamicLabelText,
                     animation: labelAnimation,
-                    labelColor: labelColor,
+                    child: label,
                     backgroundColor: backgroundColor,
                   ),
                   scrollThumb,
@@ -134,23 +127,22 @@ class DraggableScrollbar extends StatefulWidget {
     };
   }
 
-  static Widget _scrollThumbArrow(
+  static Widget _handleBuilderArrow(
     Color backgroundColor,
-    Color labelColor,
     Animation<double> thumbAnimation,
     Animation<double> labelAnimation,
     double height, {
-    String dynamicLabelText,
+    Widget label,
   }) {
     final scrollThumb = ClipPath(
-      child: Container(
-        height: height,
-        width: 20.0,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.all(
-            Radius.circular(10.0),
-          ),
+      child: Material(
+        elevation: 4.0,
+        child: Container(
+          height: height,
+          width: 20.0,
+        ),
+        borderRadius: BorderRadius.all(
+          Radius.circular(12.0),
         ),
       ),
       clipper: ArrowClipper(),
@@ -158,15 +150,14 @@ class DraggableScrollbar extends StatefulWidget {
 
     return SlideFadeTransition(
       animation: thumbAnimation,
-      child: dynamicLabelText == null
+      child: label == null
           ? scrollThumb
           : Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ScrollLabel(
-                  text: dynamicLabelText,
+                  child: label,
                   animation: labelAnimation,
-                  labelColor: labelColor,
                   backgroundColor: backgroundColor,
                 ),
                 scrollThumb
@@ -176,13 +167,12 @@ class DraggableScrollbar extends StatefulWidget {
   }
 
   //height is better 36.0
-  static Widget _scrollThumbBuilderRRect(
+  static Widget _handleBuilderRRect(
     Color backgroundColor,
-    Color labelColor,
     Animation<double> thumbAnimation,
     Animation<double> labelAnimation,
     double height, {
-    String dynamicLabelText,
+    Widget label,
   }) {
     return SlideFadeTransition(
       animation: thumbAnimation,
@@ -190,7 +180,7 @@ class DraggableScrollbar extends StatefulWidget {
         elevation: 4.0,
         child: Container(
           constraints: BoxConstraints.tight(
-            Size(15.0, height),
+            Size(16.0, height),
           ),
         ),
         color: backgroundColor,
@@ -203,15 +193,13 @@ class DraggableScrollbar extends StatefulWidget {
 class ScrollLabel extends StatelessWidget {
   final Animation<double> animation;
   final Color backgroundColor;
-  final Color labelColor;
-  final String text;
+  final Text child;
 
   const ScrollLabel({
     Key key,
-    @required this.text,
+    @required this.child,
     @required this.animation,
     @required this.backgroundColor,
-    @required this.labelColor,
   }) : super(key: key);
 
   @override
@@ -219,15 +207,15 @@ class ScrollLabel extends StatelessWidget {
     return FadeTransition(
       opacity: animation,
       child: Container(
-        margin: EdgeInsets.only(right: 10.0),
+        margin: EdgeInsets.only(right: 12.0),
         child: Material(
           elevation: 4.0,
           color: backgroundColor,
-          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+          borderRadius: BorderRadius.all(Radius.circular(16.0)),
           child: Container(
-            constraints: BoxConstraints.tight(Size(70.0, 30.0)),
+            constraints: BoxConstraints.tight(Size(72.0, 28.0)),
             alignment: Alignment.center,
-            child: Text(text, style: TextStyle(color: labelColor)),
+            child: child,
           ),
         ),
       ),
@@ -283,7 +271,7 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
   }
 
   double get barMaxScrollExtent =>
-      context.size.height - widget.heightScrollThumb;
+      context.size.height - widget.heightScrollHandle;
 
   double get barMinScrollExtent => 0.0;
 
@@ -293,10 +281,10 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
 
   @override
   Widget build(BuildContext context) {
-    String label;
-    if (widget.dynamicLabelTextBuilder != null) {
-      label = widget.dynamicLabelTextBuilder(
-        _viewOffset + _barOffset + widget.heightScrollThumb / 2,
+    Widget label;
+    if (widget.labelTextBuilder != null) {
+      label = widget.labelTextBuilder(
+        _viewOffset + _barOffset + widget.heightScrollHandle / 2,
       );
     }
 
@@ -315,13 +303,12 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
               alignment: Alignment.topRight,
               margin: EdgeInsets.only(top: _barOffset),
               padding: widget.padding,
-              child: widget.scrollThumbBuilder(
+              child: widget.scrollHandleBuilder(
                 widget.backgroundColor,
-                widget.labelColor,
                 _thumbAnimation,
                 _labelAnimation,
-                widget.heightScrollThumb,
-                dynamicLabelText: label,
+                widget.heightScrollHandle,
+                label: label,
               ),
             ),
           )
@@ -403,10 +390,10 @@ class _DraggableScrollbarState extends State<DraggableScrollbar>
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
-    if (_thumbAnimationController.status != AnimationStatus.forward) {
-      _thumbAnimationController.forward();
-    }
     setState(() {
+      if (_thumbAnimationController.status != AnimationStatus.forward) {
+        _thumbAnimationController.forward();
+      }
       if (_isDragInProcess) {
         _barOffset += details.delta.dy;
 
